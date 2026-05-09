@@ -1,5 +1,11 @@
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+import AppKit
+#endif
 
 /// Represents a color using Oklch color model:
 ///   - lightness: Perceived lightness (0...1). Zero is dark, one is bright. For perfect white/black set chroma to 0.
@@ -100,18 +106,23 @@ extension SwiftUI.Color.Resolved {
 extension SwiftUI.Color {
     
     public var oklch: Oklch? {
+        #if canImport(UIKit)
         let uiColor = UIColor(self)
         var (r, g, b, a): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
         let ok = uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
         guard ok else { return nil }
-        
+        #elseif canImport(AppKit)
+        let nsColor = NSColor(self).usingColorSpace(.sRGB) ?? NSColor(self)
+        var (r, g, b, a): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        nsColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        #else
+        return nil
+        #endif
         let rgba = sRGBToLinearsRGB(Float(r), Float(g), Float(b), Float(a))
         let oklab = linearsRGBToOKLAB(rgba.r, rgba.g, rgba.b, rgba.alpha)
         let oklch = oklabToOKLCH(oklab.l, oklab.a, oklab.b, oklab.alpha)
-        
         return Oklch(lightness: oklch.l, chroma: oklch.c, hue: .radians(Double(oklch.h)), opacity: oklch.alpha)
     }
-    
 }
 
 
